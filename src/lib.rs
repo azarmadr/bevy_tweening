@@ -418,14 +418,14 @@ macro_rules! animator_impl {
 
 /// Component to control the animation of another component.
 #[derive(Component)]
-pub struct Animator<T: Component> {
+pub struct Animator<T> {
     /// Control if this animation is played or not.
     pub state: AnimatorState,
     tweenable: BoxedTweenable<T>,
     speed: f32,
 }
 
-impl<T: Component + std::fmt::Debug> std::fmt::Debug for Animator<T> {
+impl<T: std::fmt::Debug> std::fmt::Debug for Animator<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Animator")
             .field("state", &self.state)
@@ -433,7 +433,7 @@ impl<T: Component + std::fmt::Debug> std::fmt::Debug for Animator<T> {
     }
 }
 
-impl<T: Component> Animator<T> {
+impl<T> Animator<T> {
     /// Create a new animator component from a single tweenable.
     #[must_use]
     pub fn new(tween: impl Tweenable<T> + 'static) -> Self {

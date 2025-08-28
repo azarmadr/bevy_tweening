@@ -3,17 +3,19 @@ use bevy_tweening::{lens::*, *};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     App::default()
-        .insert_resource(WindowDescriptor {
-            title: "TransformPositionLens".to_string(),
-            width: 1400.,
-            height: 600.,
-            present_mode: bevy::window::PresentMode::Fifo, // vsync
-            ..Default::default()
-        })
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                title: "Bunled Animator".to_string(),
+                width: 1200.,
+                height: 600.,
+                present_mode: bevy::window::PresentMode::Fifo, // vsync
+                ..default()
+            },
+            ..default()
+        }))
         .add_plugin(TweeningPlugin)
         .add_startup_system(setup)
-        .add_system(bundle_animator::<Sprite,Transform>)
+        .add_system(bundle_animator::<Sprite, Transform>)
         .run();
 
     Ok(())
@@ -48,28 +50,26 @@ impl<T: Clone> Lens<T> for BeTween<T> {
 }
 
 /// trying to create a bundled animator
-pub fn bundle_animator<T:Component+Clone,R:Component+Clone>(
+pub fn bundle_animator<T: Component + Clone, R: Component + Clone>(
     time: Res<Time>,
-    mut query: Query<(Entity, (&mut T,&mut R), &mut Animator<(T,R)>)>,
-    mut event_writer: EventWriter<TweenCompleted>,
-)
-{
-    for (entity, ref mut target, ref mut animator) in query.iter_mut() {
+    mut query: Query<(Entity, (&mut T, &mut R), &mut Animator<(T, R)>)>,
+    events: ResMut<Events<TweenCompleted>>,
+) {
+    for (entity, target, mut animator) in query.iter_mut() {
         if animator.state != AnimatorState::Paused {
-            if let Some(tweenable) = animator.tweenable_mut() {
-                let nt = &mut(target.0.clone(),target.1.clone());
-                tweenable.tick(time.delta(), nt, entity, &mut event_writer);
-                let (ref a,ref b) = nt;
-                *target.0 = a.clone();
-                *target.1 = b.clone();
-            }
+            let nt = &mut (target.0.clone(), target.1.clone());
+            animator
+                .tweenable_mut()
+                .tick(time.delta(), nt, entity, &mut events);
+            let (ref a, ref b) = nt;
+            *target.0 = a.clone();
+            *target.1 = b.clone();
         }
     }
 }
 
-
 fn setup(mut commands: Commands) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn(Camera2dBundle::default());
 
     let size = 25.;
 
@@ -112,10 +112,11 @@ fn setup(mut commands: Commands) {
     ] {
         let tween = Tween::new(
             *ease_function,
-            TweeningType::PingPong,
             std::time::Duration::from_secs(3),
-            BeTween::with_lerp(move |c: &mut(Sprite, Transform), _, r| {
-                c.0.color = Vec4::from(Color::RED).lerp(Vec4::from(Color::BLUE),r).into();
+            BeTween::with_lerp(move |c: &mut (Sprite, Transform), _, r| {
+                c.0.color = Vec4::from(Color::RED)
+                    .lerp(Vec4::from(Color::BLUE), r)
+                    .into();
                 c.1.translation = Vec3::new(x, screen_y, 50.).lerp(Vec3::new(x, -screen_y, 50.), r);
                 // rotation around y axis from 0 to 4pi(two rotations)
                 c.1.rotation = Quat::from_rotation_y(0. + 4. * std::f32::consts::PI * r);
